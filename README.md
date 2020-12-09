@@ -5,9 +5,9 @@
 ## Only works for ZIP files encrypted with ZipCrypto (not AES-256)
 This program was made for learning purposes only, bruteforcing a password is not viable, and this encryption algorithm is weak and vulnerable to [exploits](https://blog.devolutions.net/2020/08/why-you-should-never-use-zipcrypto) anyway. Use this responsibly, only on files you have permission to access.
 
-##Requirements
+## Requirements
 Python 3, all libraries used should be included in your environment by default. No OS-specific functions are used, so this should run on anything.
-##Usage
+## Usage
 >-f zipname
 
 Required : the zip file you want to crack.
@@ -24,7 +24,7 @@ Specify the maximum password length to be checked. Default value is 10.
 >-digits
 
 Use a custom keyspace for searching, options can be combined. If none are provided, all will be used.
-##Warnings
+## Warnings
 Be aware that bruteforcing is a CPU-intensive process, so you may experience serious system slowdowns while this is running.
 
 Killing the main process will not stop the workers, so if you decide to do so you must manually kill each one.
