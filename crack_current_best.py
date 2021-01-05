@@ -26,11 +26,10 @@ def split_keyspace(keyspc, parts):
 
 
 # will run on a core, checks for equal chunk of passwords
-# will print its progress every UPDATE number of tries
-def test_password_chunk(filename, ml, kspc, prefixes, cnumber, done):
+# will print its progress every max_update number of tries
+def test_password_chunk(filename, ml, mu, kspc, prefixes, cnumber, done):
     global update
-    global max_update
-    test_file = zipfile.ZipFile(filename)
+    test_file = zipfile.ZipFile(filename, allowZip64=True)
     # try password sizes progressively
     for keysize in range(1, ml):
         # try each prefix progressively
@@ -43,7 +42,7 @@ def test_password_chunk(filename, ml, kspc, prefixes, cnumber, done):
                     # try the password, report progress each max_update tries
                     password = prefix + key
                     pw_bytes = bytes(password, 'utf-8')
-                    if update == max_update:
+                    if update == mu:
                         print("[Worker " + str(cnumber) + "] : " + password, flush=True)
                         update = 0
                     try:
@@ -70,9 +69,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", dest="zip_name", help="Zip file to crack (Required)")
     parser.add_argument("-c", dest="max_cores", help="Maximum number of processes to spawn")
+    parser.add_argument("-u", dest="update", help="Number of iterations after a process gives a status", type=int)
     parser.add_argument("-lowercase", help="Add lowercase letters to custom keyspace", action="store_true")
     parser.add_argument("-uppercase", help="Add uppercase letters to custom keyspace", action="store_true")
     parser.add_argument("-digits", help="Add digits to custom keyspace", action="store_true")
+    parser.add_argument("-k", dest="keyspace", help="Add custom string to keyspace")
     parser.add_argument("-ml", dest="ml", help="Set custom maximum length to check", type=int)
     args = parser.parse_args()
 
@@ -85,10 +86,24 @@ def main():
 
     # check if zip is valid (not only extension)
     if zipfile.is_zipfile(zname):
-        zfile = zipfile.ZipFile(zname)
+        zfile = zipfile.ZipFile(zname, allowZip64=True)
     else:
         print("\nInput file is not a valid zip !")
         sys.exit(1)
+
+    # check if zip actually is password protected
+    try:
+        if zfile.testzip() is None:
+            print("\nInput file is not password protected !")
+            sys.exit(0)
+    except RuntimeError:
+        pass
+
+    # check for custom update interval
+    global max_update
+    if args.update is not None:
+        if args.update > 0:
+            max_update = args.update
 
     # check for custom keyspace, add options
     global keyspace
@@ -98,15 +113,26 @@ def main():
         keyspace = keyspace + string.ascii_uppercase
     if args.digits:
         keyspace = keyspace + string.digits
-    # if no custom options are found, use entire keyspace
+    if args.keyspace is not None:
+        keyspace = keyspace + args.keyspace
     if len(keyspace) == 0:
+        # if no custom options are found, use entire keyspace
         keyspace = (string.ascii_letters + string.digits)
+    # remove duplicates from keyspace
+    keyspace = "".join(set(keyspace))
+    keyspace = "".join(sorted(keyspace))
 
     # check for custom max length
     global max_length
     if args.ml is not None:
         if args.ml in range(2, 100):
             max_length = args.ml
+
+    # start message
+    print("\nOrdered brute force attack using keyspace of size " + str(len(keyspace)) + ":\n")
+    print(keyspace + "\n")
+    print("Attack will stop if password is not found at length " + str(max_length) + "\n")
+    print("Workers will report progress every " + str(max_update) + " checks\n")
 
     # shared memory, check for end state between processes
     done = multiprocessing.Value('i', 0)
@@ -143,7 +169,9 @@ def main():
     processes = []
     for i in range(cores):
         processes.append(multiprocessing.Process(target=test_password_chunk,
-                                                 args=(zname, max_length, keyspace, prefix_list[i], i, done,)))
+                                                 args=(
+                                                     zname, max_length, max_update, keyspace, prefix_list[i], i,
+                                                     done,)))
     for pro in processes:
         pro.start()
 
