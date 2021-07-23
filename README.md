@@ -1,7 +1,5 @@
 # Python-Zipfile-Bruteforcer
 
-![Requirement](https://i.imgur.com/YgblCp8.png)
-
 ## Only works for ZIP files encrypted with ZipCrypto using a UTF-8 password
 This program was made for learning purposes only, bruteforcing a password is not viable, and this encryption algorithm is weak and vulnerable to [exploits](https://blog.devolutions.net/2020/08/why-you-should-never-use-zipcrypto) anyway. Use this responsibly, only on files you have permission to access.
 
